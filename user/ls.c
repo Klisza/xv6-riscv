@@ -1,12 +1,12 @@
+#include "kernel/types.h"
 #include "kernel/fcntl.h"
 #include "kernel/fs.h"
 #include "kernel/stat.h"
-#include "kernel/types.h"
 #include "user/user.h"
 
 char *fmtname(char *path) {
   static char buf[DIRSIZ + 1];
-  char *p;
+  char       *p;
 
   // Find first character after last slash.
   for (p = path + strlen(path); p >= path && *p != '/'; p--)
@@ -23,10 +23,10 @@ char *fmtname(char *path) {
 }
 
 void ls(char *path) {
-  char buf[512], *p;
-  int fd;
+  char          buf[512], *p;
+  int           fd;
   struct dirent de;
-  struct stat st;
+  struct stat   st;
 
   if ((fd = open(path, O_RDONLY)) < 0) {
     fprintf(2, "ls: cannot open %s\n", path);
@@ -69,12 +69,23 @@ void ls(char *path) {
   close(fd);
 }
 
+// stat syscall to see if file is a directory
+void ls_r(char *path) {}
+
 int main(int argc, char *argv[]) {
   int i;
-
   if (argc < 2) {
     ls(".");
     exit(0);
+  }
+  if (strcmp(argv[1], "-R") == 0) {
+    if (argc < 3) {
+      ls(".");
+      exit(0);
+    }
+    for (i = 2; i < argc; i++) {
+      ls_r(argv[i]);
+    }
   }
   for (i = 1; i < argc; i++)
     ls(argv[i]);
