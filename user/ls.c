@@ -22,11 +22,21 @@ char *fmtname(char *path) {
   return buf;
 }
 
-void ls(char *path) {
+// Linked list for strings as values
+typedef struct node {
+  char *dir;
+  struct node *next;
+} node_t;
+
+// Add arg to ls
+// Use a queue (linked list) to add the dir files that need to get listed
+// Work them through one after one with the original ls command.
+void ls(char *path, char* arg) {
   char          buf[512], *p;
   int           fd;
   struct dirent de;
   struct stat   st;
+  node_t queue;
 
   if ((fd = open(path, O_RDONLY)) < 0) {
     fprintf(2, "ls: cannot open %s\n", path);
@@ -38,7 +48,22 @@ void ls(char *path) {
     close(fd);
     return;
   }
-
+  if (strcmp(arg, "-R") == 0) {
+    switch (st.type) {
+    case T_DEVICE:
+      break;
+    case T_FILE:
+      printf("%s %d %d %d\n", fmtname(path), st.type, st.ino, (int)st.size);
+      break;
+    case T_DIR:
+      if (strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
+        printf("ls: path too long\n");
+      break;
+      }
+    }
+  }
+  else
+{
   switch (st.type) {
   case T_DEVICE:
   case T_FILE:
@@ -66,78 +91,29 @@ void ls(char *path) {
       printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
     }
     break;
+    }
   }
   close(fd);
 }
 
-// stat syscall to see if file is a directory
-void ls_r(char *path) {
-  char          buf[512], *p;
-  int           fd;
-  struct dirent de;
-  struct stat   st;
-
-  if ((fd = open(path, O_RDONLY)) < 0) {
-    fprintf(2, "ls: cannot open %s\n", path);
-    return;
-  }
-
-  if (fstat(fd, &st) < 0) {
-    fprintf(2, "ls: cannot stat %s\n", path);
-    close(fd);
-    return;
-  }
-
-  switch (st.type) {
-  case T_DEVICE:
-  case T_FILE:
-    printf("%s %d %d %d\n", fmtname(path), st.type, st.ino, (int)st.size);
-    break;
-
-  case T_DIR:
-    if (strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
-      printf("ls: path too long\n");
-      break;
-    }
-    strcpy(buf, path);
-    p = buf + strlen(buf);
-    *p++ = '/';
-    while (read(fd, &de, sizeof(de)) == sizeof(de)) {
-      if (de.inum == 0)
-        continue;
-      memmove(p, de.name, DIRSIZ);
-      p[DIRSIZ] = 0;
-      if (stat(buf, &st) < 0) {
-        printf("ls: cannot stat %s\n", buf);
-        continue;
-      }
-      // Add the path into a buffer.
-      // Call ls on all of the directories after calling the original is done.
-      // Repeat until done.
-      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
-    }
-    break;
-  }
-  close(fd);
-}
 
 int main(int argc, char *argv[]) {
   int i;
   if (argc < 2) {
-    ls(".");
+    ls(".", " ");
     exit(0);
   }
   if (strcmp(argv[1], "-R") == 0) {
     if (argc < 3) {
-      ls(".");
+      ls(".", " ");
       exit(0);
     }
     for (i = 2; i < argc; i++) {
-      ls_r(argv[i]);
+      ls(argv[i], "-R");
       exit(0);
     }
   }
   for (i = 1; i < argc; i++)
-    ls(argv[i]);
+    ls(argv[i], " ");
   exit(0);
 }
