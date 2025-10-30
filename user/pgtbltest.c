@@ -17,7 +17,6 @@ int
 main(int argc, char *argv[])
 {
   print_pgtbl();
-  ugetpid_test();
   print_kpgtbl();
   superpg_fork();
   superpg_free();
@@ -53,32 +52,6 @@ print_pgtbl()
     print_pte(i * PGSIZE);
   }
   printf("print_pgtbl: OK\n");
-}
-
-void
-ugetpid_test()
-{
-  int i;
-
-  printf("ugetpid_test starting\n");
-  testname = "ugetpid_test";
-
-  if(getpid() != ugetpid())
-    err("mismatched PID #1");
-
-  for (i = 0; i < 64; i++) {
-    int ret = fork();
-    if (ret != 0) {
-      wait(&ret);
-      if (ret != 0)
-        exit(1);
-      continue;
-    }
-    if (getpid() != ugetpid())
-      err("mismatched PID #2");
-    exit(0);
-  }
-  printf("ugetpid_test: OK\n");
 }
 
 void

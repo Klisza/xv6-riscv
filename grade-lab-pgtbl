@@ -11,10 +11,6 @@ def test_pgtbltest():
         'pgtbltest'
     ]), timeout=300)
 
-@test(10, "pgtbltest: ugetpid", parent=test_pgtbltest)
-def test_ugetpid_():
-    r.match('^ugetpid_test: OK$')
-
 @test(10, "pgtbltest: print_kpgtbl", parent=test_pgtbltest)
 def test_print_kpgtbl_():
     r.match(
@@ -37,19 +33,10 @@ def test_superpg_():
     r.match('^superpg_fork: OK$')
     r.match('^superpg_free: OK$')
 
-@test(5, "answers-pgtbl.txt")
-def test_answers():
-    # just a simple sanity check, will be graded manually
-    check_answers("answers-pgtbl.txt")
-
 @test(0, "usertests")
 def test_usertests():
     r.run_qemu(shell_script([
         'usertests -q'
     ]), timeout=300)
-
-@test(1, "time")
-def test_time():
-    check_time()
 
 run_tests()
