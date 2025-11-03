@@ -15,32 +15,72 @@ def test_pgtbltest():
 def test_ugetpid_():
     r.match('^ugetpid_test: OK$')
 
-@test(10, "pgtbltest: print_kpgtbl", parent=test_pgtbltest)
-def test_print_kpgtbl_():
-    r.match(
-        '^page table 0x',
-        '^ \.\.0x0000000000000000',
-        '^ \.\. \.\.0x0000000000000000',
-        '^ \.\. \.\. \.\.0x0000000000000000',
-        '^ \.\. \.\. \.\.0x0000000000001000',
-        '^ \.\. \.\. \.\.0x0000000000002000',
-        '^ \.\. \.\. \.\.0x0000000000003000',
-        '^ \.\.(0xffffffffc0000000|0x0000003fc0000000)',
-        '^ \.\. \.\.(0xffffffffffe00000|0x0000003fffe00000)',
-        '^ \.\. \.\. \.\.(0xffffffffffffd000|0x0000003fffffd000)',
-        '^ \.\. \.\. \.\.(0xffffffffffffe000|0x0000003fffffe000)',
-        '^ \.\. \.\. \.\.(0xfffffffffffff000|0x0000003ffffff000)',
-    )
+@test(5, "sandbox_mask")
+def test_sandbox_mask():
+    r.run_qemu(shell_script([
+        'sandbox 32768 - echo "hello"',
+        'sandbox 32768 - cat README',
+        'sandbox 32768 - grep xv6 README',
+        'sandbox 128 - grep xv6 README',
+        'sandbox 32896 - grep xv6 README',
+        'sandbox 128 - sh < exec.sh',
+    ]))
+    r.match('^"hello"')
+    r.match('^cat: cannot open README')
+    r.match('^grep: cannot open README')
+    r.match('^sandbox: exec grep failed')
+    r.match('^sandbox: exec sh failed')
 
-@test(15, "pgtbltest: superpg", parent=test_pgtbltest)
-def test_superpg_():
-    r.match('^superpg_fork: OK$')
-    r.match('^superpg_free: OK$')
+@test(5, "sandbox_fork")
+def test_sandbox_fork():
+    r.run_qemu(shell_script([
+        'sandbox 32768 - sh < exec.sh',
+        'echo DONE',
+    ], 'DONE'))
+    matches = re.findall("hello world", r.qemu.output)
+    assert_equal(len(matches), 1, "Number of appearances of 'hello world'")
+    matches = re.findall("cannot open .", r.qemu.output)
+    assert_equal(len(matches), 1, "Number of appearances of 'ls: cannot open .'")
 
-@test(5, "answers-pgtbl.txt")
-def test_answers():
-    # just a simple sanity check, will be graded manually
-    check_answers("answers-pgtbl.txt")
+@test(5, "sandbox_path")
+def test_sandbox_path():
+    r.run_qemu(shell_script([
+        'sandbox 32768 README grep xv6 README',
+        'cat README > x',
+        'sandbox 32768 README grep xv6 x',
+        'sandbox 32768 x grep xv6 x',
+        'sandbox 128 sh sh < exec.sh',
+    ]))
+    matches = re.findall("xv6", r.qemu.output)
+    assert_equal(len(matches), 12, "Number of appearances of 'xv6'")
+    r.match('^grep: cannot open x')
+    matches = re.findall("hello world!", r.qemu.output)
+    assert_equal(len(matches), 0, "Number of appearances of 'hello world' failed")
+    matches = re.findall("exec ls failed", r.qemu.output)
+    assert_equal(len(matches), 0, "Number of appearances of 'zombie' failed")
+
+# sandbox all calls except: exit, and exec grep
+@test(5, "sandbox_most")
+def test_sandbox_most():
+    r.run_qemu(shell_script([
+        'sandbox 2147483643 grep grep xv6 README',
+    ]))
+    matches = re.findall("xv6", r.qemu.output)
+    assert_equal(len(matches), 2, "Number of appearances of 'xv6'")
+    matches = re.findall("exec", r.qemu.output)
+    assert_equal(len(matches), 0, "Number of appearances of 'exec'")
+
+    # sandbox all calls except: exit, and exec grep
+
+@test(5, "sandbox_minus")
+def test_sandbox_bigpath():
+    r.run_qemu(shell_script([
+        'echo hello! > ---',
+        'sandbox 32768 --- grep hello! ---',
+    ]))
+    matches = re.findall("hello!", r.qemu.output)
+    assert_equal(len(matches), 3, "Number of appearances of 'hello!'")
+
 
 @test(0, "usertests")
 def test_usertests():

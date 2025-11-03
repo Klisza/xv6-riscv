@@ -255,7 +255,8 @@ endif
 
 ifeq ($(LAB),pgtbl)
 UPROGS += \
-	$U/_pgtbltest
+	$U/_pgtbltest \
+	$U/_sandbox
 endif
 
 ifeq ($(LAB),lock)
@@ -286,7 +287,7 @@ ifeq ($(LAB),util)
 	UEXTRA += user/sixfive.txt
 	UPROGS += $U/_memdump
 endif
-ifeq ($(LAB),syscall)
+ifeq ($(LAB),pgtbl)
 	UEXTRA += user/exec.sh
 endif
 
