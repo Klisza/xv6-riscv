@@ -24,19 +24,19 @@ char *fmtname(char *path) {
 
 // Linked list for strings as values
 typedef struct node {
-  char *dir;
+  char        *dir;
   struct node *next;
 } node_t;
 
 // Add arg to ls
 // Use a queue (linked list) to add the dir files that need to get listed
 // Work them through one after one with the original ls command.
-void ls(char *path, char* arg) {
+void ls(char *path, char *arg) {
   char          buf[512], *p;
   int           fd;
   struct dirent de;
   struct stat   st;
-  node_t queue;
+  node_t        queue = {0, 0};
 
   if ((fd = open(path, O_RDONLY)) < 0) {
     fprintf(2, "ls: cannot open %s\n", path);
@@ -58,44 +58,43 @@ void ls(char *path, char* arg) {
     case T_DIR:
       if (strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
         printf("ls: path too long\n");
-      break;
+        break;
+      } else {
       }
     }
-  }
-  else
-{
-  switch (st.type) {
-  case T_DEVICE:
-  case T_FILE:
-    printf("%s %d %d %d\n", fmtname(path), st.type, st.ino, (int)st.size);
-    break;
+  } else {
+    switch (st.type) {
+    case T_DEVICE:
+    case T_FILE:
+      printf("%s %d %d %d\n", fmtname(path), st.type, st.ino, (int)st.size);
+      break;
 
-  case T_DIR:
-    if (strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
-      printf("ls: path too long\n");
-      break;
-    }
-    strcpy(buf, path);
-    p = buf + strlen(buf);
-    *p++ = '/';
-    while (read(fd, &de, sizeof(de)) == sizeof(de)) {
-      if (de.inum == 0)
-        continue;
-      memmove(p, de.name, DIRSIZ);
-      p[DIRSIZ] = 0;
-      if (stat(buf, &st) < 0) {
-        printf("ls: cannot stat %s\n", buf);
-        continue;
+    case T_DIR:
+      if (strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
+        printf("ls: path too long\n");
+        break;
       }
-      if(st.type == T_DIR) printf("IS A DIR ");
-      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
-    }
-    break;
+      strcpy(buf, path);
+      p = buf + strlen(buf);
+      *p++ = '/';
+      while (read(fd, &de, sizeof(de)) == sizeof(de)) {
+        if (de.inum == 0)
+          continue;
+        memmove(p, de.name, DIRSIZ);
+        p[DIRSIZ] = 0;
+        if (stat(buf, &st) < 0) {
+          printf("ls: cannot stat %s\n", buf);
+          continue;
+        }
+        if (st.type == T_DIR)
+          printf("IS A DIR ");
+        printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
+      }
+      break;
     }
   }
   close(fd);
 }
-
 
 int main(int argc, char *argv[]) {
   int i;
