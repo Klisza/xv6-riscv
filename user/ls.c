@@ -4,7 +4,7 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-#define QUEUE_CAP 512
+void ls(char *path, char *arg);
 
 char *fmtname(char *path) {
   static char buf[DIRSIZ + 1];
@@ -23,28 +23,39 @@ char *fmtname(char *path) {
   buf[sizeof(buf) - 1] = '\0';
   return buf;
 }
-// Queue functions
-typedef struct queue_t {
-  char *arr[QUEUE_CAP];
-  int   front;
-  int   back;
-  int   count;
-} Queue;
 
-int isFull(Queue *q) { return q->front >= QUEUE_CAP; }
+typedef struct Node {
+  char        *data;
+  struct Node *next;
+} Node;
 
-int isEmpty(Queue *q) { return q->count == 0; }
+void appendList(Node *n, Node *tail) {
+  if (n->next == 0) {
+    n->next = tail;
+  } else {
+    appendList(n->next, tail);
+  }
+  return;
+}
+
+int isEmpty(Node *head) { return head->data == 0; }
+
+void recursiveLs(Node *head) {
+  if (isEmpty(head))
+    return;
+  else {
+    ls(head->data, "-R");
+    recursiveLs(head->next);
+  }
+}
 
 void ls(char *path, char *arg) {
   char          buf[512], *p;
   int           fd;
   struct dirent de;
   struct stat   st;
-
-  Queue queue;
-  queue.arr[0] = "";
-  queue.front = -1;
-  queue.back = 0;
+  Node          head;
+  Node          tail;
 
   if ((fd = open(path, O_RDONLY)) < 0) {
     fprintf(2, "ls: cannot open %s\n", path);
@@ -80,12 +91,19 @@ void ls(char *path, char *arg) {
         continue;
       }
       printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
-      if (st.type == T_DIR && strcmp(arg, "-R") == 0)
-      // queue.arr =
-      printf("IS A DIR\n");
+      if (st.type == T_DIR && strcmp(arg, "-R") == 0) {
+        if (isEmpty(&head))
+          head.data = fmtname(buf);
+        else {
+          tail.data = fmtname(buf);
+          appendList(&head, &tail);
+        }
+      }
     }
     break;
   }
+  if (strcmp(arg, "-R") == 0)
+    recursiveLs(&head);
   close(fd);
 }
 
