@@ -4,6 +4,8 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+#define QUEUE_CAP 512
+
 char *fmtname(char *path) {
   static char buf[DIRSIZ + 1];
   char       *p;
@@ -21,18 +23,18 @@ char *fmtname(char *path) {
   buf[sizeof(buf) - 1] = '\0';
   return buf;
 }
-
-typedef struct {
-  char *arr[512];
+// Queue functions
+typedef struct queue_t {
+  char *arr[QUEUE_CAP];
   int   front;
   int   back;
+  int   count;
 } Queue;
 
-int isFull(Queue *q) { return q->front >= 512; }
+int isFull(Queue *q) { return q->front >= QUEUE_CAP; }
 
-// Add arg to ls
-// Use a queue (linked list) to add the dir files that need to get listed
-// Work them through one after one with the original ls command.
+int isEmpty(Queue *q) { return q->count == 0; }
+
 void ls(char *path, char *arg) {
   char          buf[512], *p;
   int           fd;
@@ -40,6 +42,7 @@ void ls(char *path, char *arg) {
   struct stat   st;
 
   Queue queue;
+  queue.arr[0] = "";
   queue.front = -1;
   queue.back = 0;
 
@@ -76,12 +79,10 @@ void ls(char *path, char *arg) {
         printf("ls: cannot stat %s\n", buf);
         continue;
       }
-      if (st.type == T_DIR)
-        printf("IS A DIR ");
       printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
       if (st.type == T_DIR && strcmp(arg, "-R") == 0)
-        // queue.arr =
-        printf("IS A DIR\n");
+      // queue.arr =
+      printf("IS A DIR\n");
     }
     break;
   }
