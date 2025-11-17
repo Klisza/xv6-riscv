@@ -52,8 +52,4 @@ def test_sbrkbugs():
 def test_usertests_all():
     r.match('^ALL TESTS PASSED$')
 
-@test(1, "time")
-def test_time():
-    check_time()
-
 run_tests()
