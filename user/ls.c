@@ -4,8 +4,6 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-void ls(char *path, char *arg);
-
 char *fmtname(char *path) {
   static char buf[DIRSIZ + 1];
   char       *p;
@@ -29,24 +27,38 @@ typedef struct Node {
   struct Node *next;
 } Node;
 
-void appendList(Node *n, Node *tail) {
-  if (n->next == 0) {
-    n->next = tail;
+void appendList(Node **head, Node **tail, char *s) {
+  Node *n = malloc(sizeof(Node));
+  if (n == 0) {
+    fprintf(2, "malloc: cannot allocate memory for Node n.");
+    return;
+  }
+
+  n->data = s;
+  n->next = 0;
+  if (*head == 0) {
+    // Init the head of the list. Head = tail at the beginning.
+    *head = n;
+    *tail = n;
   } else {
-    appendList(n->next, tail);
+    // Set n to next of current tail and set tail to n after.
+    (*tail)->next = n;
+    *tail = n;
   }
   return;
 }
 
-int isEmpty(Node *head) { return head->data == 0; }
-
-void recursiveLs(Node *head) {
-  if (isEmpty(head))
-    return;
-  else {
-    ls(head->data, "-R");
-    recursiveLs(head->next);
+void freeList(Node *head) {
+  Node *cur = head;
+  while (cur) {
+    // printf("Freeing...\n");
+    Node *next = cur->next;
+    free(cur->data);
+    free(cur);
+    cur = next;
   }
+  // printf("Done freeing...\n");
+  return;
 }
 
 void ls(char *path, char *arg) {
@@ -54,8 +66,8 @@ void ls(char *path, char *arg) {
   int           fd;
   struct dirent de;
   struct stat   st;
-  Node          head;
-  Node          tail;
+  Node         *head = 0;
+  Node         *tail = 0;
 
   if ((fd = open(path, O_RDONLY)) < 0) {
     fprintf(2, "ls: cannot open %s\n", path);
@@ -81,9 +93,16 @@ void ls(char *path, char *arg) {
     strcpy(buf, path);
     p = buf + strlen(buf);
     *p++ = '/';
+    printf("%s:\n", path);
     while (read(fd, &de, sizeof(de)) == sizeof(de)) {
       if (de.inum == 0)
         continue;
+
+      // printf("Reading the directory...\n");
+      // Setting the char pointer p to the end of buff and adding the null
+      // terminator.
+      // memmove copies the name into the buffer after the "/" where p points to
+      // It does not change the positon where p points to
       memmove(p, de.name, DIRSIZ);
       p[DIRSIZ] = 0;
       if (stat(buf, &st) < 0) {
@@ -92,18 +111,32 @@ void ls(char *path, char *arg) {
       }
       printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int)st.size);
       if (st.type == T_DIR && strcmp(arg, "-R") == 0) {
-        if (isEmpty(&head))
-          head.data = fmtname(buf);
-        else {
-          tail.data = fmtname(buf);
-          appendList(&head, &tail);
-        }
+        if (strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0)
+          continue; // Skip current and parent directory
+        int i = strlen(buf) + 1;
+        // Set the size of memory to the same size of the buffer + 1 (null
+        // terminator)
+        char *cp = malloc(sizeof(char) * i);
+        if (cp == 0)
+          continue; // malloc failed
+        strcpy(cp, buf);
+        appendList(&head, &tail, cp);
       }
     }
+    printf("\n");
     break;
   }
-  if (strcmp(arg, "-R") == 0)
-    recursiveLs(&head);
+  if (head != 0 && strcmp(arg, "-R") == 0) {
+    // Iterate over the list and free the nodes after
+    Node *cur = head;
+    while (cur != 0) {
+      // printf("Going through the list...\n");
+      Node *next = cur->next;
+      ls(cur->data, "-R");
+      cur = next;
+    }
+    freeList(head);
+  }
   close(fd);
 }
 
@@ -118,10 +151,8 @@ int main(int argc, char *argv[]) {
       ls(".", "-R");
       exit(0);
     }
-    for (i = 2; i < argc; i++) {
+    for (i = 2; i < argc; i++)
       ls(argv[i], "-R");
-      exit(0);
-    }
   }
   for (i = 1; i < argc; i++)
     ls(argv[i], "");
