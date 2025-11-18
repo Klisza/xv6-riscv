@@ -27,7 +27,7 @@ typedef struct Node {
   struct Node *next;
 } Node;
 
-void appendList(Node **head, Node **tail, char *s) {
+void appendlist(Node **head, Node **tail, char *s) {
   Node *n = malloc(sizeof(Node));
   if (n == 0) {
     fprintf(2, "malloc: cannot allocate memory for Node n.");
@@ -48,7 +48,7 @@ void appendList(Node **head, Node **tail, char *s) {
   return;
 }
 
-void freeList(Node *head) {
+void freelist(Node *head) {
   Node *cur = head;
   while (cur) {
     // printf("Freeing...\n");
@@ -116,11 +116,13 @@ void ls(char *path, char *arg) {
         int i = strlen(buf) + 1;
         // Set the size of memory to the same size of the buffer + 1 (null
         // terminator)
-        char *cp = malloc(sizeof(char) * i);
-        if (cp == 0)
-          continue; // malloc failed
-        strcpy(cp, buf);
-        appendList(&head, &tail, cp);
+        char *data = malloc(sizeof(char) * i);
+        if (data == 0) {
+          fprintf(2, "Out of memory.\n");
+          exit(1);
+        }
+        strcpy(data, buf);
+        appendlist(&head, &tail, data);
       }
     }
     printf("\n");
@@ -135,7 +137,7 @@ void ls(char *path, char *arg) {
       ls(cur->data, "-R");
       cur = next;
     }
-    freeList(head);
+    freelist(head);
   }
   close(fd);
 }
