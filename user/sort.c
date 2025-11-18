@@ -1,7 +1,7 @@
-#include <kernel/types.h>
-#include <user/user.h>
-#include <kernel/fcntl.h>
-#include <kernel/stat.h>
+#include "kernel/types.h"
+#include "user/user.h"
+#include "kernel/fcntl.h"
+#include "kernel/stat.h"
 
 typedef struct Node {
   char        *data;
@@ -12,7 +12,7 @@ typedef struct Node {
 void appendlist(Node **head, Node **tail, char *s) {
   Node *n = malloc(sizeof(Node));
   if (n == 0) {
-    fprintf(2, "malloc: cannot allocate memory for Node n.");
+    fprintf(2, "malloc: cannot allocate memory for Node n.\n");
     return;
   }
 
@@ -101,85 +101,96 @@ Node *mergesort(Node *head) {
   return merge(first, second);
 }
 
-void readfile_and_sort(char *path) {
-  int         fd;
-  int         n;
-  struct stat st;
-  char        buf[512];
-  Node       *head = 0;
-  Node       *tail = 0;
+void sort(int fd) {
+  int   n;
+  char  buf[512];
+  Node *head = 0;
+  Node *tail = 0;
   // longest english word.
   char wordbuf[45 + 1];
   int  wordlen = 0;
-
-  if ((fd = open(path, O_RDONLY)) < 0) {
-    fprintf(2, "sort: cannot open %s\n", path);
-    exit(1);
-  }
-
-  if (fstat(fd, &st) < 0) {
-    fprintf(2, "sort: cannot stat %s\n", path);
-    close(fd);
-    exit(1);
-  }
-  switch (st.type) {
-  case T_DEVICE:
-    fprintf(2, "sort: cannot sort device.\n");
-    break;
-  case T_FILE:
-    // Read all the words/strings from the file and create a linked list.
-    while ((n = read(fd, buf, sizeof(buf) - 1) != 0) > 0) {
-      // File is now in buffer
-      for (int i = 0; i < n; i++) {
-        char c = buf[i];
-        if (c == ' ' || c == '\n' || c == '\t') {
-          if (wordlen > 0) {
-            wordbuf[wordlen] = '\0';
-            int   len = strlen(wordbuf) + 1;
-            char *data = malloc(len);
-            if (data == 0) {
-              fprintf(2, "Out of memory.\n");
-              exit(1);
-            }
-            strcpy(data, buf);
-            appendlist(&head, &tail, data);
-            wordlen = 0;
-          } else {
-            // Multiple whitespaces present.
-            continue;
+  // Read all the words/strings from the file and create a linked list.
+  while ((n = read(fd, buf, sizeof(buf) - 1)) > 0) {
+    // File is now in buffer
+    for (int i = 0; i < n; i++) {
+      char c = buf[i];
+      if (c == ' ' || c == '\n' || c == '\t') {
+        if (wordlen > 0) {
+          wordbuf[wordlen] = '\0';
+          int   len = strlen(wordbuf) + 1;
+          char *data = malloc(len);
+          if (data == 0) {
+            fprintf(2, "Out of memory.\n");
+            exit(1);
           }
-        } else if (wordlen < sizeof(wordbuf) - 1) {
-          wordlen++;
-          wordbuf[wordlen] = c;
+          strcpy(data, wordbuf);
+          appendlist(&head, &tail, data);
+          wordlen = 0;
         } else {
-          fprintf(2, "String is too long.\n");
+          // Multiple whitespaces present.
+          continue;
         }
+      } else if (wordlen < sizeof(wordbuf) - 1) {
+        wordbuf[wordlen] = c;
+        wordlen++;
+      } else {
+        fprintf(2, "String is too long.\n");
       }
     }
-    // Sort the linked list and print it out.
-    mergesort(head);
-    Node *cur = head;
-    while (cur->next != 0) {
-      printf("%s ", cur->data);
-      cur = cur->next;
-    }
-    freelist(head);
-    break;
-  case T_DIR:
-    fprintf(2, "sort: cannot sort directory.\n");
-    break;
   }
+  if (wordlen > 0) {
+    wordbuf[wordlen] = '\0';
+    int   len = strlen(wordbuf) + 1;
+    char *data = malloc(len);
+    if (data == 0) {
+      fprintf(2, "Out of memory.\n");
+      exit(1);
+    }
+    strcpy(data, wordbuf);
+    appendlist(&head, &tail, data);
+    wordlen = 0;
+  }
+  // Sort the linked list and print it out.
+  head = mergesort(head);
+  freelist(head);
+  Node *cur = head;
+  while (cur != 0) {
+    printf("%s ", cur->data);
+    cur = cur->next;
+  }
+  printf("\n");
+  freelist(head);
 
   close(fd);
-  exit(0);
+  return;
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 2)
-    printf("Pipe command.\n");
-  else
-    for (int i = 0; i < argc; i++) {
-      readfile_and_sort(argv[i]);
-    };
+    sort(0);
+  else {
+    for (int i = 1; i < argc; i++) {
+      int fd = open(argv[i], O_RDONLY);
+      if (fd < 0) {
+        fprintf(2, "Open: cannot open %s\n", argv[i]);
+        exit(1);
+      }
+
+      struct stat st;
+      if (fstat(fd, &st) < 0) {
+        fprintf(2, "sort: cannot stat %s\n", argv[i]);
+        close(fd);
+        exit(0);
+      }
+
+      if (st.type == T_DIR || st.type == T_DEVICE) {
+        fprintf(2, "sort: cannot sort %s\n", argv[i]);
+        close(fd);
+        exit(1);
+      }
+      sort(fd);
+      close(fd);
+    }
+  }
   exit(0);
 }
