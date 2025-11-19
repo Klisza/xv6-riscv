@@ -1,0 +1,11 @@
+BasedOnStyle: LLVM
+
+# Important, as otherwise includes break
+SortIncludes: false
+
+AlignConsecutiveDeclarations: true
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 2
+
+AllowShortBlocksOnASingleLine: Empty

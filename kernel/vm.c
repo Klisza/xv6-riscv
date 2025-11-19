@@ -1,14 +1,12 @@
-#include "defs.h"
-#include "elf.h"
-#include "fs.h"
-#include "memlayout.h"
 #include "param.h"
-#include "proc.h"
-#include "riscv.h"
-#include "spinlock.h"
 #include "types.h"
-
-/*
+#include "memlayout.h"
+#include "elf.h"
+#include "riscv.h"
+#include "defs.h"
+#include "spinlock.h"
+#include "proc.h"
+#include "fs.h"/*
  * the kernel's page table.
  */
 pagetable_t kernel_pagetable;
