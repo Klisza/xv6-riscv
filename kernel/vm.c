@@ -127,22 +127,7 @@ uint64 walkaddr(pagetable_t pagetable, uint64 va) {
   return pa;
 }
 
-/*
-for(int i = 0; i < 512; i++){
-    pte_t pte = pagetable[i];
-    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
-      // this PTE points to a lower-level page table.
-      uint64 child = PTE2PA(pte);
-      freewalk((pagetable_t)child);
-      pagetable[i] = 0;
-    } else if(pte & PTE_V){
-      // backtrace();
-      panic("freewalk: leaf");
-    }
-  }
-*/
-
-void vmprintwalk(pagetable_t pagetable, int level, uint64 va_prefix) {
+static void vmprintwalk(pagetable_t pagetable, int level, uint64 va_prefix) {
   for (int i = 0; i < 512; i++) {
     pte_t pte = pagetable[i];
 
@@ -165,13 +150,13 @@ void vmprintwalk(pagetable_t pagetable, int level, uint64 va_prefix) {
   return;
 }
 
-// #if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
+#if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
 void vmprint(pagetable_t pagetable) {
   printf("page table %p\n", pagetable);
   vmprintwalk(pagetable, 2, 0);
   return;
 }
-// #endif
+#endif
 
 // add a mapping to the kernel page table.
 // only used when booting.
