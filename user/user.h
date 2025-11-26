@@ -29,6 +29,7 @@ int getpid(void);
 char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
+int interpose(int mask, const char *path);
 #ifdef LAB_NET
 int bind(uint16);
 int unbind(uint16);

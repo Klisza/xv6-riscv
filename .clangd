@@ -1,0 +1,31 @@
+# Fragment 1: apply to all files in this project
+CompileFlags:
+  Add: [
+    "-I.",
+    "-Ikernel",
+    "-Iuser",
+    "-DLAB_PGTBL",
+    "-DSOL_PGTBL",
+    "-Wno-gnu-designator"
+  ]
+
+Diagnostics:
+  Suppress: [
+    "gnu-designator"
+  ]
+
+---
+# Fragment 2: extra help *only when a header is the main file*
+If:
+  # NOTE: this is a *relative* path pattern, because .clangd is in the project
+  PathMatch: .*\.h$
+
+CompileFlags:
+  Add: [
+    "-include", "kernel/types.h",
+    "-include", "kernel/param.h",
+    "-include", "kernel/spinlock.h",
+    "-include", "kernel/defs.h",
+    "-include", "kernel/riscv.h"
+  ]
+
